@@ -4,69 +4,77 @@ import pandas as pd
 import random
 import os
 
-# ==========================================
-# 1. 초기 설정 및 API 연동
-# ==========================================
+# 1. 초기 설정
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 st.set_page_config(page_title="김영편입 노량진 - 종합 AI 튜터", page_icon="📖", layout="wide")
 
-# 단어 데이터 로드 함수
 def load_vocab():
     if os.path.exists("voca.csv"):
-        df = pd.read_csv("voca.csv")
-        # 단어와 뜻을 딕셔너리 형태로 변환
-        return dict(zip(df['word'], df['meaning']))
+        # 인코딩 문제 방지를 위해 utf-8-sig 사용
+        df = pd.read_csv("voca.csv", encoding='utf-8-sig')
+        return df
     else:
-        return {"Error": "voca.csv 파일을 찾을 수 없습니다."}
+        return None
 
-# ==========================================
-# 2. 사이드바 메뉴
-# ==========================================
+# 2. 사이드바
 st.sidebar.title("종합 학습 시스템")
-menu = st.sidebar.radio("메뉴 이동", ["📝 일일 어휘 테스트", "📖 AI 구문 분석 튜터"])
+menu = st.sidebar.radio("메뉴 이동", ["📝 객관식 어휘 테스트", "📖 AI 구문 분석 튜터"])
 
-# ==========================================
-# 3. [메뉴 1] 일일 어휘 테스트 (CSV 연동형)
-# ==========================================
-if menu == "📝 일일 어휘 테스트":
-    st.title("📝 일일 어휘 테스트")
+# 3. [메뉴 1] 객관식 어휘 테스트
+if menu == "📝 객관식 어휘 테스트":
+    st.title("📝 객관식 어휘 테스트")
+    df = load_vocab()
     
-    vocab_db = load_vocab()
-    
-    if "Error" in vocab_db:
-        st.error(vocab_db["Error"])
+    if df is None:
+        st.error("voca.csv 파일을 찾을 수 없습니다.")
     else:
-        if 'current_word' not in st.session_state:
-            st.session_state.current_word = random.choice(list(vocab_db.keys()))
+        # 새로운 문제 생성 로직
+        if 'quiz_data' not in st.session_state:
+            # 문제 단어 선정
+            target_row = df.sample(n=1).iloc[0]
+            question_word = target_row['word']
+            correct_answer = target_row['meaning']
             
-        st.subheader(f"Q. 다음 단어의 뜻은? : **{st.session_state.current_word}**")
-        
-        with st.form(key='vocab_form'):
-            user_answer = st.text_input("정답 입력:")
-            submit_button = st.form_submit_button("제출 및 채점")
+            # 오답 후보 선정 (현재 단어 제외하고 3개 무작위 추출)
+            distractors = df[df['meaning'] != correct_answer]['meaning'].sample(n=3).tolist()
             
-        if submit_button:
-            correct_answer = vocab_db[st.session_state.current_word]
-            if user_answer.strip() == str(correct_answer):
-                st.success("🎉 정답입니다!")
-            else:
-                st.error(f"❌ 틀렸습니다. 정답은 '{correct_answer}' 입니다.")
-                
-        if st.button("🔄 다음 문제 뽑기"):
-            st.session_state.current_word = random.choice(list(vocab_db.keys()))
-            st.rerun()
+            # 보기 4개 섞기
+            options = distractors + [correct_answer]
+            random.shuffle(options)
+            
+            st.session_state.quiz_data = {
+                'word': question_word,
+                'answer': correct_answer,
+                'options': options,
+                'solved': False
+            }
 
-# ==========================================
-# 4. [메뉴 2] AI 구문 분석 튜터
-# ==========================================
+        quiz = st.session_state.quiz_data
+        st.subheader(f"Q. 다음 단어의 알맞은 뜻을 고르세요: **{quiz['word']}**")
+
+        # 객관식 버튼 생성
+        for option in quiz['options']:
+            if st.button(option, key=option, use_container_width=True):
+                quiz['solved'] = True
+                if option == quiz['answer']:
+                    st.success(f"⭕ 정답입니다! : {option}")
+                else:
+                    st.error(f"❌ 틀렸습니다. 정답은 '{quiz['answer']}' 입니다.")
+
+        # 다음 문제 버튼
+        if quiz['solved']:
+            if st.button("➡️ 다음 문제로 넘어가기"):
+                del st.session_state.quiz_data
+                st.rerun()
+
+# 4. [메뉴 2] AI 구문 분석 튜터 (기존 로직 동일)
 elif menu == "📖 AI 구문 분석 튜터":
     st.title("📖 AI 구문 분석 튜터")
-    # (기존 구문 분석 코드와 동일하여 생략, 실제 파일에는 전체 코드를 넣어주세요)
+    # ... (기존 구문 분석 코드 붙여넣기)
     user_input = st.text_area("분석할 영어 문장을 입력하세요:", height=150)
     if st.button("분석 시작하기"):
-        # ... (이전 코드의 분석 로직 그대로 유지)
+        # AI 분석 로직...
         pass
