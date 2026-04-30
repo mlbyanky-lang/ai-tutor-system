@@ -4,6 +4,31 @@ import pandas as pd
 import random
 import os
 
+st.set_page_config(page_title="김영편입 노량진 - 종합 AI 튜터", page_icon="🚀", layout="wide")
+
+# ==========================================
+# 🚨 [신규 추가] 수강생 인증(도어락) 시스템
+# ==========================================
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("🔒 김영편입 노량진 AI 튜터")
+    st.info("본 서비스는 수강생 전용 프리미엄 AI 시스템입니다.")
+    
+    # 비밀번호 입력 칸
+    pwd = st.text_input("수강생 인증 코드를 입력하세요:", type="password")
+    
+    if st.button("입장하기"):
+        # 금고(secrets)에 저장된 비밀번호와 비교
+        if pwd == st.secrets["APP_PASSWORD"]: 
+            st.session_state.authenticated = True
+            st.rerun() # 화면 새로고침하여 메인 화면으로 이동
+        else:
+            st.error("❌ 인증 코드가 올바르지 않습니다. 학원 데스크에 문의하세요.")
+            
+    st.stop() # ⚠️ 인증되지 않으면 여기서 실행을 완전히 멈춤 (아래 코드는 숨겨짐)
+
 # ==========================================
 # 1. AI 설정 및 보안 (유료 플랜 대응)
 # ==========================================
@@ -95,7 +120,7 @@ if menu == "📝 맞춤형 어휘 테스트":
 # ==========================================
 elif menu == "📖 AI 구문 분석 튜터":
     st.title("📖 AI 구문 분석 튜터")
-    st.info("💡 유료 플랜 적용 시 대기 시간 없이 즉시 분석됩니다.")
+    st.info("🚀 노량진 캠퍼스 전용 프리미엄 AI 서버 가동 중 (대기 시간 없음)")
     
     user_input = st.text_area("분석할 영어 문장을 입력하세요:", height=150)
     
